@@ -241,13 +241,16 @@ const AssistantMessage: FC = () => {
       >
         <MessagePrimitive.PartGroups
           groupBy={(part) => {
-            if (part.type === "reasoning") return "reasoning";
-            if (part.type === "tool-call") return "tool";
+            if (part.type === "reasoning")
+              return ["chainOfThought", "reasoning"];
+            if (part.type === "tool-call") return ["chainOfThought", "tool"];
             return null;
           }}
         >
           {({ groupKey, isStreaming, indices, children }) => {
             switch (groupKey) {
+              case "chainOfThought":
+                return <div data-slot="aui_chain-of-thought">{children}</div>;
               case "reasoning":
                 return (
                   <ReasoningRoot defaultOpen={isStreaming}>

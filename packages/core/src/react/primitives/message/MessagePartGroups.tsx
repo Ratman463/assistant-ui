@@ -33,9 +33,12 @@ export namespace MessagePrimitivePartGroups {
     /** Status of the last contained part. */
     readonly status: MessagePartStatus | ToolCallMessagePartStatus;
     /**
-     * For groups: the recursively-rendered inner content.
-     * For leaf runs (groupKey === null): a sentinel element that throws on
-     * render — you must render `<MessagePrimitive.Parts>` instead.
+     * For groups: the recursively-rendered inner content (subgroups + their
+     * own leaf renders).
+     * For leaf runs (groupKey === null): `null`. Use a `default:` branch to
+     * render `<MessagePrimitive.Parts>` for the range — that branch also
+     * catches unhandled named groups, which then render flat (effectively
+     * skipping the group wrapper).
      */
     readonly children: ReactNode;
   };
@@ -66,18 +69,15 @@ export namespace MessagePrimitivePartGroups {
 
     /**
      * Render function called once per group node and once per implicit leaf
-     * run. Switch on `groupKey` to wrap each named group; in the `null` case,
-     * render `<MessagePrimitive.Parts>` to provide per-part UI for the leaf run.
+     * run. Switch on `groupKey` to wrap each named group; use `default:` to
+     * render `<MessagePrimitive.Parts>` — it catches both leaf runs
+     * (`groupKey === null`) and any group keys you haven't (yet) wrapped, so
+     * adding a new key to `groupBy` without a matching case just renders the
+     * parts flat.
      */
     readonly children: (info: GroupInfo) => ReactNode;
   };
 }
-
-const LeafChildrenSentinel: FC = () => {
-  throw new Error(
-    "MessagePrimitive.PartGroups: cannot return `children` for the null (leaf) case — render <MessagePrimitive.Parts> to provide per-part UI.",
-  );
-};
 
 const COMPLETE_STATUS: MessagePartStatus = Object.freeze({ type: "complete" });
 
@@ -96,7 +96,7 @@ const renderNode = (
     isStreaming: status.type === "running",
     status,
     ...(node.type === "leaf"
-      ? { groupKey: null, children: <LeafChildrenSentinel /> }
+      ? { groupKey: null, children: null }
       : {
           groupKey: node.key,
           children: (
@@ -118,9 +118,11 @@ const renderNode = (
  * Groups adjacent message parts into a tree of coalesced runs.
  *
  * The children render function is called once per group node and once per
- * implicit leaf run (siblings at every depth). Leaf runs dispatch to
- * `case null:` and must be rendered via `<MessagePrimitive.Parts>` — returning
- * `children` directly throws at render time.
+ * implicit leaf run (siblings at every depth). Wrap each named group in its
+ * own `case`; use `default:` to render `<MessagePrimitive.Parts>` for the
+ * range. The `default:` branch catches both leaf runs and any unhandled named
+ * groups, so adding a new key to `groupBy` without a matching case just
+ * renders those parts flat.
  *
  * @example
  * ```tsx
@@ -136,7 +138,7 @@ const renderNode = (
  *       case "thought": return <ChainOfThought>{children}</ChainOfThought>;
  *       case "reasoning": return <Reasoning.Root defaultOpen={isStreaming}>{children}</Reasoning.Root>;
  *       case "tool": return <ToolStack>{children}</ToolStack>;
- *       case null:
+ *       default:
  *         return (
  *           <MessagePrimitive.Parts>
  *             {({ part }) => renderLeafPart(part)}
