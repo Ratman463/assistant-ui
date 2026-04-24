@@ -1,5 +1,11 @@
 # @assistant-ui/react-langchain
 
+## 0.0.4
+
+### Patch Changes
+
+- [#3885](https://github.com/assistant-ui/assistant-ui/pull/3885) [`eddd892`](https://github.com/assistant-ui/assistant-ui/commit/eddd8927404cbe05470979cfa6d4b5f87c270daa) - chore: update dependencies ([@Yonom](https://github.com/Yonom))
+
 ## 0.0.3
 
 ### Patch Changes
