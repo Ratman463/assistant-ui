@@ -39,6 +39,7 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CopyIcon,
@@ -62,7 +63,7 @@ import {
   type DirectiveChipProps,
 } from "@assistant-ui/react-lexical";
 import Image from "next/image";
-import { useState, type FC } from "react";
+import { useEffect, useRef, useState, type FC } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ModelSelector } from "@/components/assistant-ui/model-selector";
 import { docsModelOptions } from "@/components/docs/assistant/docs-model-options";
@@ -502,6 +503,16 @@ const AssistantActionBar: FC = () => {
 };
 
 const UserMessage: FC = () => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isOverflowing, setIsOverflowing] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    setIsOverflowing(el.scrollHeight > el.clientHeight + 1);
+  });
+
   return (
     <MessagePrimitive.Root
       data-slot="aui_user-message-root"
@@ -512,10 +523,23 @@ const UserMessage: FC = () => {
 
       <div className="aui-user-message-content-wrapper relative col-start-2 min-w-0">
         <div className="aui-user-message-content wrap-break-word peer rounded-2xl bg-muted px-4 py-2.5 text-foreground empty:hidden">
-          <MessagePrimitive.Quote>
-            {(quote) => <QuoteBlock {...quote} />}
-          </MessagePrimitive.Quote>
-          <MessagePrimitive.Parts components={{ Text: DirectiveText }} />
+          <div className="relative">
+            <div
+              ref={contentRef}
+              className={cn(!isExpanded && "max-h-36 overflow-hidden")}
+            >
+              <MessagePrimitive.Quote>
+                {(quote) => <QuoteBlock {...quote} />}
+              </MessagePrimitive.Quote>
+              <MessagePrimitive.Parts components={{ Text: DirectiveText }} />
+            </div>
+            {!isExpanded && isOverflowing && (
+              <UserMessageExpandFade onClick={() => setIsExpanded(true)} />
+            )}
+          </div>
+          {isExpanded && (
+            <UserMessageCollapseButton onClick={() => setIsExpanded(false)} />
+          )}
         </div>
         <div className="aui-user-action-bar-wrapper absolute top-1/2 left-0 -translate-x-full -translate-y-1/2 pr-2 peer-empty:hidden">
           <UserActionBar />
@@ -527,6 +551,44 @@ const UserMessage: FC = () => {
         className="col-span-full col-start-1 row-start-3 -mr-1 justify-end"
       />
     </MessagePrimitive.Root>
+  );
+};
+
+const UserMessageExpandFade: FC<
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+> = ({ className, ...props }) => {
+  return (
+    <button
+      type="button"
+      data-slot="user-message-expand-fade"
+      className={cn(
+        "aui-user-message-expand-fade absolute inset-x-0 bottom-0 flex cursor-pointer items-end justify-center bg-[linear-gradient(to_top,var(--color-muted),transparent)] pt-8 pb-0.5 text-muted-foreground text-xs hover:text-foreground",
+        className,
+      )}
+      {...props}
+    >
+      Show more
+      <ChevronDownIcon className="size-3 shrink-0" />
+    </button>
+  );
+};
+
+const UserMessageCollapseButton: FC<
+  React.ButtonHTMLAttributes<HTMLButtonElement>
+> = ({ className, ...props }) => {
+  return (
+    <button
+      type="button"
+      data-slot="user-message-collapse"
+      className={cn(
+        "aui-user-message-collapse mt-1 flex cursor-pointer items-center gap-0.5 text-muted-foreground text-xs hover:text-foreground",
+        className,
+      )}
+      {...props}
+    >
+      Show less
+      <ChevronDownIcon className="size-3 shrink-0 rotate-180" />
+    </button>
   );
 };
 
